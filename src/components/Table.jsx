@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { IoMdArrowDropdown, IoMdArrowDropup } from "react-icons/io";
 import {
   useReactTable,
@@ -12,7 +12,7 @@ import { rankItem } from "@tanstack/match-sorter-utils";
 import { FaEye } from "react-icons/fa";
 import { MdDelete, MdEdit } from "react-icons/md";
 
-// دالة لتصفية البيانات باستخدام البحث الذكي
+
 const fuzzyFilter = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value);
   addMeta({ itemRank });
@@ -20,9 +20,15 @@ const fuzzyFilter = (row, columnId, value, addMeta) => {
 };
 
 // eslint-disable-next-line react/prop-types
-function Table({ data, columns, pageSize = 5, globalFilter, setGlobalFilter ,filterType }) {
+function Table({ data, columns, pageSize, globalFilter, setGlobalFilter, filterType , columnVisibility, setColumnVisibility}) {
   const [sorting, setSorting] = useState([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize });
+  // const [columnVisibility, setColumnVisibility] = useState({});
+
+  useEffect(() => {
+    table.setPageSize(pageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageSize]);
 
   const filteredData = useMemo(() => {
     // eslint-disable-next-line react/prop-types
@@ -33,16 +39,17 @@ function Table({ data, columns, pageSize = 5, globalFilter, setGlobalFilter ,fil
       return true;
     });
   }, [data, filterType]);
- 
+
   const table = useReactTable({
-    data:filteredData ,
+    data: filteredData,
     columns,
     filterFns: { fuzzy: fuzzyFilter },
-    state: { globalFilter, sorting, pagination },
+    state: { globalFilter, sorting, pagination, columnVisibility },
     onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: "fuzzy",
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
+    onColumnVisibilityChange: setColumnVisibility,
+    globalFilterFn: "fuzzy",
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -51,9 +58,8 @@ function Table({ data, columns, pageSize = 5, globalFilter, setGlobalFilter ,fil
 
 
   return (
-    <div className="flex justify-center">
+    <div className="flex justify-center mb-4">
       <div className="container mt-3 overflow-auto">
-        
         <table className="table-auto w-full border">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -86,10 +92,11 @@ function Table({ data, columns, pageSize = 5, globalFilter, setGlobalFilter ,fil
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
-                
                 <td className="p-2 text-center border">
                   <div className="dropdown dropdown-end">
-                    <div tabIndex={0} role="button" className="btn border-none bg-white h-[27px] hover:bg-blue-900 hover:text-white"><p className="mt-[-7px]">...</p></div>
+                    <div tabIndex={0} role="button" className="btn border-none bg-white h-[27px] hover:bg-blue-900 hover:text-white">
+                      <p className="mt-[-7px]">...</p>
+                    </div>
                     <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box w-36 z-1  p-2 shadow-sm">
                       <li><a className="flex gap-1 items-center"><FaEye /> View</a></li>
                       <li><a className="flex gap-1 items-center"><MdEdit /> Edit</a></li>

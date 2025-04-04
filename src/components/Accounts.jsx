@@ -1,40 +1,214 @@
+/* eslint-disable react/prop-types */
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { useState } from "react";
 import { FaFilter } from "react-icons/fa6"
 import { IoMdArrowDropdown } from "react-icons/io"
 import { PiPrinter } from "react-icons/pi"
+import { jsPDF } from "jspdf"; 
+import * as XLSX from 'xlsx';
+import { IoNewspaperSharp } from "react-icons/io5";
 
-// eslint-disable-next-line react/prop-types
-function Accounts({ globalFilter, setGlobalFilter , setFilterType }) {
+function Accounts({ globalFilter, setGlobalFilter , setFilterType , setPageSize , data , columns ,columnVisibility, setColumnVisibility}) {
+  const [showFilter, setShowFilter] = useState(true);
+  const [result , setResult] = useState("Show 10 result");
+  const tempTable = useReactTable({
+    data: [],
+    columns,
+    state: {
+      columnVisibility,
+    },
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  function hiddenFilter(){
+    setShowFilter(!showFilter);
+  }
+ // Convert To Excel
+  const exportToExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Accounts");
+    XLSX.writeFile(wb, "accounts.xlsx");
+  };
+
+  // Convert To CVC
+  const exportToCSV = () => {
+    const headers = columns.map(col => col.header).join(",");
+    const rows = data.map(row => columns.map(col => row[col.accessorKey]).join(","));
+    const csvContent = [headers, ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "accounts.csv";
+    link.click();
+  }
+
+  // Convert To PDF 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Accounts List", 14, 22);
+
+    let y = 30;
+    doc.setFontSize(12);
+    columns.forEach((col, index) => {
+      doc.text(col.header, 14 + (index * 40), y);
+    });
+
+    data.forEach((row) => {
+      y += 10;
+      columns.forEach((col, colIndex) => {
+        doc.text(row[col.accessorKey]?.toString() || '', 14 + (colIndex * 40), y);
+      });
+    });
+
+    doc.save("accounts.pdf");
+  }
+
+  // Print
+  const printData = () => {
+    let printWindow = window.open("", "", "width=800,height=600");
+    printWindow.document.write("<html><head><title>Print Accounts</title></head><body>");
+    printWindow.document.write("<h2>Accounts List</h2>");
+    
+    let tableHtml = "<table border='1' style='width: 100%; border-collapse: collapse;'>";
+    tableHtml += "<tr>";
+    columns.forEach((col) => {
+      tableHtml += `<th style='padding: 5px;'>${col.header}</th>`;
+    });
+    tableHtml += "</tr>";
+
+    data.forEach((row) => {
+      tableHtml += "<tr>";
+      columns.forEach((col) => {
+        tableHtml += `<td style='padding: 5px;'>${row[col.accessorKey]}</td>`;
+      });
+      tableHtml += "</tr>";
+    });
+    tableHtml += "</table>";
+    printWindow.document.write(tableHtml);
+    printWindow.document.write("</body></html>");
+    printWindow.document.close();
+    printWindow.print();
+  }
+
   return (
     <div>
       <div className="flex justify-center">
-        <div className=" container mt-3">
+        <div className="container mt-3">
           <div className="flex justify-between">
             <p className="pl-2 text-blue-900 text-lg font-bold">Accounts</p>
             <div className="flex gap-2 pr-1">
-              <button className="flex font-bold border-blue-900 border-r text-sm border-t border-b py-1 border-l items-center gap-1 bg-white text-blue-900 px-3 rounded-md"><span><FaFilter /></span>filter</button>
-              <button className="flex font-bold items-center bg-blue-900 text-white px-3 text-sm py-1 rounded-md">New account</button>
+              <button onClick={hiddenFilter} className="btn flex font-bold border-blue-900 border-r text-sm border-t border-b py-1 border-l items-center gap-1 bg-white text-blue-900 px-3 rounded-md"><span><FaFilter /></span>filter</button>
+              <button className="btn flex font-bold items-center bg-blue-900 text-white px-3 text-sm py-1 rounded-md" onClick={()=>document.getElementById('my_modal_2').showModal()}>New Account</button>
+              <dialog id="my_modal_2" className="modal">
+                <div className="modal-box sm:max-w-[70%] max-w-[90%]">
+                  <div className="flex items-center gap-3 h-[50px] pl-5 border-b">
+                    <span className="rounded-full w-7 flex justify-center items-center h-7 bg-blue-200"><IoNewspaperSharp /></span>
+                    <p className="font-bold">New Account</p>
+                  </div>
+                  <form className="my-4 border-b " action="">
+                    <div className="flex flex-col gap-2 w-full">
+                      <label className="text-sm text-gray-500" htmlFor="code">Code:</label>
+                      <input className="w-full border p-2 h-8" type="number" id="code" />
+                    </div>
+                    <div className="flex flex-col gap-2 w-full mt-3">
+                      <label className="text-sm text-gray-500" htmlFor="name">Name:</label>
+                      <input className="w-full border p-2 h-8" type="text" id="name" />
+                    </div>
+                    <div className="flex flex-col gap-2 w-full mt-3">
+                      <label className="text-sm text-gray-500" htmlFor="currency">Main Currency</label>
+                      <select className="w-full h-fit border p-2" type="text" id="currency">
+                        <option value="usd">USD</option>
+                        <option value="lbp">LBP</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-2 w-full mt-3">
+                      <label className="text-sm text-gray-500" htmlFor="address">Address:</label>
+                      <input className="w-full border p-2 h-8" type="text" id="address" />
+                    </div>
+                    <div className="flex flex-col gap-2 w-full mt-3">
+                      <label className="text-sm text-gray-500" htmlFor="mobile">Mobile:</label>
+                      <input className="w-full border p-2 h-8" type="phone" id="mobile" />
+                    </div>
+                  </form>
+                  <div className="flex justify-end gap-2 mt-3 mb-4">
+                      <form method="dialog">
+                        {/* if there is a button in form, it will close the modal */}
+                        <button className="btn rounded-md h-8 transition-all duration-300 bg-white hover:bg-blue-900 text-blue-900 hover:text-white">Close</button>
+                      </form>
+                      <button className="btn rounded-md h-8 transition-all duration-300 bg-blue-900 hover:bg-white text-white hover:text-blue-900">Create</button>
+                  </div>
+                </div>
+              </dialog>
             </div>
           </div>
-          <div className="flex pl-3 rounded-md mt-5 gap-9 h-[60px] items-center bg-blue-200">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">ALL</span> <input onClick={() => setFilterType("all")} className="mt-0.5" type="radio" name="" id="" />
-            </div>            
-            <div>
-              <span className="text-sm">SUPPLIER </span> <input onClick={() => setFilterType("supplier")} className="mt-0.5" type="radio" name="" id="" />
-            </div>
-            <div>
-              <span className="text-sm">CUSTOMER </span> <input onClick={() => setFilterType("customer")} className="mt-0.5" type="radio" name="" id="" />  
-            </div>
+          <div
+            className={`transition-all duration-500 overflow-hidden ${showFilter ? "max-h-[100px] opacity-100 scale-100" : "max-h-0 opacity-0 scale-95"}`}
+          >
+            <form id="filtration" className="flex pl-3 rounded-md mt-5 gap-9 h-[60px] items-center bg-blue-200">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">ALL</span>
+                <input name="filter" onClick={() => setFilterType("all")} className="mt-0.5" type="radio" id="all" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">SUPPLIER</span>
+                <input name="filter" onClick={() => setFilterType("supplier")} className="mt-0.5" type="radio" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">CUSTOMER</span>
+                <input name="filter" onClick={() => setFilterType("customer")} className="mt-0.5" type="radio" />
+              </div>
+            </form>
           </div>
           <div className="flex gap-3 md:flex-row flex-col justify-between items-center mt-2">
             <div className="flex gap-2">
               <div className="flex sm:flex-row flex-col gap-2">
-                <button className="flex items-center gap-1 border px-3 py-1 text-sm border-blue-500 rounded-md"><span className=" text-green-400"><PiPrinter /></span>Print</button>
-                <button className="flex items-center gap-1 border px-3 py-1 text-sm border-blue-500 rounded-md">Export <span><IoMdArrowDropdown /></span></button>
+                <button onClick={printData} className="flex items-center gap-1 border px-3 py-1 h-[41px] mb-2 text-sm border-blue-500 rounded-md"><span className=" text-green-400"><PiPrinter /></span>Print</button>
+                <div className="dropdown dropdown-start">
+                  <div tabIndex={0} role="button" className="btn flex items-center gap-1 border px-3 py-1 text-sm bg-white border-blue-500 rounded-md">Export <span><IoMdArrowDropdown /></span></div>
+                  <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+                    <li onClick={exportToCSV}><a>CVC</a></li>
+                    <li onClick={exportToPDF}><a>PDF</a></li>
+                    <li onClick={exportToExcel}><a>Excel</a></li>
+                  </ul>
+                </div>
               </div>
               <div className="flex sm:flex-row flex-col gap-2">
-                <button className="flex items-center gap-1 border px-3 py-1 text-sm border-blue-500 rounded-md">Column visibility <span><IoMdArrowDropdown /></span></button>
-                <button className="flex items-center gap-1 border px-3 py-1 text-sm border-blue-500 rounded-md">Show 10 rows <span><IoMdArrowDropdown /></span></button>
+                <div className="flex justify-end mb-2">
+                  <div className="dropdown dropdown-end">
+                    <div tabIndex={0} role="button" className="btn border px-3 py-1 text-sm border-blue-500 rounded-md">
+                      Column Visibility
+                    </div>
+                    <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10">
+                      {tempTable.getAllColumns()
+                      .filter((column) => column.getCanHide())
+                      .map((column) => (
+                        <li key={column.id} className="px-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={column.getIsVisible()}
+                              onChange={column.getToggleVisibilityHandler()}
+                              className="checkbox checkbox-sm"
+                            />
+                            <span className="text-sm">{column.columnDef.header || column.id}</span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <div className="dropdown dropdown-end">
+                  <div tabIndex={0} role="button" className="btn flex items-center gap-1 border px-3 py-1 text-sm bg-white border-blue-500 rounded-md"> {result} <span><IoMdArrowDropdown /></span></div>
+                  <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
+                    <li onClick={()=> {setPageSize(10) ; setResult("Show 10 Result");}}><a>Show 10 Result</a></li>
+                    <li onClick={()=> {setPageSize(20) ; setResult("Show 20 Result");}}><a>Show 20 Result</a></li>
+                    <li onClick={()=> {setPageSize(50) ; setResult("Show 50 Result");}}><a>Show 50 Result</a></li>
+                    <li onClick={()=> {setPageSize(data.length) ; setResult("Show All data");}}><a>Show All Result</a></li>
+                  </ul>
+                </div>
               </div>
             </div>
             <div>
@@ -47,4 +221,4 @@ function Accounts({ globalFilter, setGlobalFilter , setFilterType }) {
   )
 }
 
-export default Accounts
+export default Accounts;
