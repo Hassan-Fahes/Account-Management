@@ -8,9 +8,76 @@ import { jsPDF } from "jspdf";
 import * as XLSX from 'xlsx';
 import { IoNewspaperSharp } from "react-icons/io5";
 
-function Accounts({ globalFilter, setGlobalFilter , setFilterType , setPageSize , data , columns ,columnVisibility, setColumnVisibility}) {
+function Accounts({ globalFilter, setData , setGlobalFilter , setFilterType , setPageSize , data , columns ,columnVisibility, setColumnVisibility}) {
   const [showFilter, setShowFilter] = useState(true);
   const [result , setResult] = useState("Show 10 result");
+  const[success , setSuccess] = useState("") ;
+  const [inputValue , setInputValue] = useState({code : "" , name : "" , currency : "USD" , address : "" , mobile : ""});
+  const [errors , setErrors] = useState({errorCode : "" , errorName : "" , errorCurrency : "" , errorAddress : "" , errorMobile : ""});
+
+  // function To add a account
+  const addAccount = async () => {
+    // Header
+    const myHeaders = new Headers() ;
+    myHeaders.append("Content-Type" , "application/json") ;
+    // Body
+    const data = {
+      code: inputValue.code,
+      name: inputValue.name,
+      currency: inputValue.currency,
+      address: inputValue.address,
+      mobile: inputValue.mobile,
+    };
+
+    const requestOptions = {
+      method : "POST" ,
+      headers : myHeaders ,
+      body : JSON.stringify(data)
+    }
+
+    await fetch("http://localhost/Account_Management/client_side/server_side/api/addAccount.php" , requestOptions)
+    .then(response => response.json())
+    .then(result => getResultAddAccout(result))
+    .catch(error => console.error("Error:", error));
+
+    function getResultAddAccout(result){
+      if(result.status == "error"){
+        setErrors({
+          errorCode: result.errors.code || "",
+          errorName: result.errors.name || "",
+          errorAddress: result.errors.address || "",
+          errorCurrency: result.errors.currency || "",
+          errorMobile: result.errors.mobile || ""
+        });
+      }else{
+        setErrors({
+          errorCode: "",
+          errorName: "",
+          errorAddress: "",
+          errorCurrency: "",
+          errorMobile: ""
+        });
+        setInputValue({
+          code : "" ,
+          name : "" , 
+          currency : "USD" ,
+          address : "" ,
+          mobile : "" 
+        })
+        setSuccess(result.message) ;
+        
+        setData(prev => [...prev, {
+          id : result.id ,
+          code: inputValue.code,
+          name: inputValue.name,
+          address: inputValue.address,
+          main_currency: inputValue.currency,
+          mobile: inputValue.mobile
+        }]);
+      }
+    }
+  }
+
   const tempTable = useReactTable({
     data: [],
     columns,
@@ -110,35 +177,40 @@ function Accounts({ globalFilter, setGlobalFilter , setFilterType , setPageSize 
                   </div>
                   <form className="my-4 border-b " action="">
                     <div className="flex flex-col gap-2 w-full">
-                      <label className="text-sm text-gray-500" htmlFor="code">Code:</label>
-                      <input className="w-full border p-2 h-8" type="number" id="code" />
+                      <div className="flex gap-3">
+                        <label className="text-sm text-gray-500" htmlFor="code">Code:</label><span className="font-bold text-sm text-red-600">{errors.errorCode}</span>
+                      </div>
+                      <input value={inputValue.code} placeholder="401888888" onChange={(e) => setInputValue({...inputValue , code :e.target.value})} className="w-full border p-2 h-8" type="number" id="code" />
                     </div>
                     <div className="flex flex-col gap-2 w-full mt-3">
-                      <label className="text-sm text-gray-500" htmlFor="name">Name:</label>
-                      <input className="w-full border p-2 h-8" type="text" id="name" />
+                      <label className="text-sm text-gray-500" htmlFor="name">Name:</label><span className="font-bold text-sm text-red-600">{errors.errorName}</span>
+                      <input value={inputValue.name} placeholder="Hassan" onChange={(e) => setInputValue({...inputValue , name : e.target.value})} className="w-full border p-2 h-8" type="text" id="name" />
                     </div>
                     <div className="flex flex-col gap-2 w-full mt-3">
-                      <label className="text-sm text-gray-500" htmlFor="currency">Main Currency</label>
-                      <select className="w-full h-fit border p-2" type="text" id="currency">
-                        <option value="usd">USD</option>
-                        <option value="lbp">LBP</option>
+                      <label className="text-sm text-gray-500" htmlFor="currency">Main Currency</label><span className="font-bold text-sm text-red-600">{errors.errorCurrency}</span>
+                      <select onChange={(e) => setInputValue({...inputValue , currency : e.target.value})} className="w-full h-fit border p-2" type="text" id="currency">
+                        <option value="USD">USD</option>
+                        <option value="LBP">LBP</option>
                       </select>
                     </div>
                     <div className="flex flex-col gap-2 w-full mt-3">
-                      <label className="text-sm text-gray-500" htmlFor="address">Address:</label>
-                      <input className="w-full border p-2 h-8" type="text" id="address" />
+                      <label className="text-sm text-gray-500" htmlFor="address">Address:</label><span className="font-bold text-sm text-red-600">{errors.errorAddress}</span>
+                      <input value={inputValue.address} placeholder="Jibchit" onChange={(e) => setInputValue({...inputValue , address:e.target.value})} className="w-full border p-2 h-8" type="text" id="address" />
                     </div>
                     <div className="flex flex-col gap-2 w-full mt-3">
-                      <label className="text-sm text-gray-500" htmlFor="mobile">Mobile:</label>
-                      <input className="w-full border p-2 h-8" type="phone" id="mobile" />
+                      <label className="text-sm text-gray-500" htmlFor="mobile">Mobile:</label><span className="font-bold text-sm text-red-600">{errors.errorMobile}</span>
+                      <input value={inputValue.mobile} placeholder="81872206" onChange={(e) => setInputValue({...inputValue , mobile:e.target.value})} className="w-full border p-2 h-8" type="phone" id="mobile" />
                     </div>
                   </form>
-                  <div className="flex justify-end gap-2 mt-3 mb-4">
-                      <form method="dialog">
-                        {/* if there is a button in form, it will close the modal */}
-                        <button className="btn rounded-md h-8 transition-all duration-300 bg-white hover:bg-blue-900 text-blue-900 hover:text-white">Close</button>
-                      </form>
-                      <button className="btn rounded-md h-8 transition-all duration-300 bg-blue-900 hover:bg-white text-white hover:text-blue-900">Create</button>
+                  <div className=" flex justify-between items-center">
+                    <p className="text-sm text-green-500 font-bold">{success}</p>
+                    <div className="flex justify-end gap-2 mt-3 mb-4">
+                        <form method="dialog">
+                          {/* if there is a button in form, it will close the modal */}
+                          <button className="btn rounded-md h-8 transition-all duration-300 bg-white hover:bg-blue-900 text-blue-900 hover:text-white">Close</button>
+                        </form>
+                        <button onClick={addAccount} className="btn rounded-md h-8 transition-all duration-300 bg-blue-900 hover:bg-white text-white hover:text-blue-900">Create</button>
+                    </div>
                   </div>
                 </div>
               </dialog>

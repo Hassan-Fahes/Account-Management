@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { IoMdArrowDropdown, IoMdArrowDropup } from "react-icons/io";
 import {
   useReactTable,
@@ -11,7 +11,7 @@ import {
 import { rankItem } from "@tanstack/match-sorter-utils";
 import { FaEye } from "react-icons/fa";
 import { MdDelete, MdEdit } from "react-icons/md";
-
+import { IoNewspaperSharp } from "react-icons/io5";
 
 const fuzzyFilter = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value);
@@ -20,15 +20,95 @@ const fuzzyFilter = (row, columnId, value, addMeta) => {
 };
 
 // eslint-disable-next-line react/prop-types
-function Table({ data, columns, pageSize, globalFilter, setGlobalFilter, filterType , columnVisibility, setColumnVisibility}) {
+function Table({ data, setData, columns, pageSize, globalFilter, setGlobalFilter, filterType, columnVisibility, setColumnVisibility }) {
   const [sorting, setSorting] = useState([]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize });
-  // const [columnVisibility, setColumnVisibility] = useState({});
+  const modalsRef = useRef({});
+  const [editData, setEditData] = useState(null);
+  const editModalRef = useRef(null);
+  const [success, setSuccess] = useState("");
+  const [errors , setErrors] = useState({errorCode: "" , errorName : "" , errorAddress : "" , errorCurrency : "" , errorMobile : ""});
 
   useEffect(() => {
     table.setPageSize(pageSize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageSize]);
+
+  useEffect(() => {
+    const getAccounts = async () => {
+      try {
+        const response = await fetch("http://localhost/Account_Management/client_side/server_side/api/getAccounts.php");
+        const result = await response.json();
+        if (result.status === "success") {
+          setData(result.accounts);
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    };
+    getAccounts();
+  }, [setData]);
+
+  const deleteAccount = async (account_id) => {
+    try {
+      const response = await fetch("http://localhost/Account_Management/client_side/server_side/api/deleteAccount.php", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ account_id })
+      });
+      const result = await response.json();
+      if (result.status === "success") {
+        setData(prevData => prevData.filter(account => account.id !== account_id));
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const handleEditClick = (row) => {
+    setEditData(row);
+    editModalRef.current?.showModal();
+  };
+
+  const saveEdit = async (updatedData) => {
+    try {
+      const response = await fetch("http://localhost/Account_Management/client_side/server_side/api/editAccount.php", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedData)
+      });
+      const result = await response.json();
+      if (result.status === "success") {
+        setData(prev =>
+          prev.map(acc =>
+            acc.id === updatedData.id ? { ...acc, ...updatedData } : acc
+          )
+        );
+        setSuccess("Account updated successfully");
+        setTimeout(() => {
+          setSuccess("");
+          editModalRef.current.close();
+        }, 1500);
+        setErrors({
+          errorCode: "",
+          errorName: "",
+          errorAddress: "",
+          errorCurrency: "",
+          errorMobile: ""
+        });
+      }else{
+        setErrors({
+          errorCode: result.errors.code || "",
+          errorName: result.errors.name || "",
+          errorAddress: result.errors.address || "",
+          errorCurrency: result.errors.currency || "",
+          errorMobile: result.errors.mobile || ""
+        });
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
 
   const filteredData = useMemo(() => {
     // eslint-disable-next-line react/prop-types
@@ -56,6 +136,10 @@ function Table({ data, columns, pageSize, globalFilter, setGlobalFilter, filterT
     getSortedRowModel: getSortedRowModel(),
   });
 
+  const openDeleteModal = (id) => {
+    const modal = modalsRef.current[id];
+    if (modal) modal.showModal();
+  };
 
   return (
     <div className="flex justify-center mb-4">
@@ -72,11 +156,8 @@ function Table({ data, columns, pageSize, globalFilter, setGlobalFilter, filterT
                   >
                     <div className="flex justify-between items-center">
                       {flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.getIsSorted() === "asc" ? (
-                        <IoMdArrowDropup />
-                      ) : header.column.getIsSorted() === "desc" ? (
-                        <IoMdArrowDropdown />
-                      ) : null}
+                      {header.column.getIsSorted() === "asc" ? <IoMdArrowDropup /> :
+                        header.column.getIsSorted() === "desc" ? <IoMdArrowDropdown /> : null}
                     </div>
                   </th>
                 ))}
@@ -99,8 +180,8 @@ function Table({ data, columns, pageSize, globalFilter, setGlobalFilter, filterT
                     </div>
                     <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box w-36 z-1  p-2 shadow-sm">
                       <li><a className="flex gap-1 items-center"><FaEye /> View</a></li>
-                      <li><a className="flex gap-1 items-center"><MdEdit /> Edit</a></li>
-                      <li><a className="flex gap-1 items-center"><MdDelete /> Delete</a></li>
+                      <li><a className="flex gap-1 items-center" onClick={() => handleEditClick(row.original)}><MdEdit /> Edit</a></li>
+                      <li><a className="flex gap-1 items-center" onClick={() => openDeleteModal(row.original.id)}><MdDelete /> Delete</a></li>
                     </ul>
                   </div>
                 </td>
@@ -109,40 +190,127 @@ function Table({ data, columns, pageSize, globalFilter, setGlobalFilter, filterT
           </tbody>
         </table>
 
+        {/* Pagination */}
         <div className="flex items-center justify-between mt-4">
           <span className="text-gray-600 text-sm">
             Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getPrePaginationRowModel().rows.length)} of {table.getPrePaginationRowModel().rows.length} entries
           </span>
 
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="px-3 py-1 bg-gray-200 text-sm text-gray-700 rounded disabled:opacity-50"
-            >
-              Previous
-            </button>
-
+            <button onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()} className="px-3 py-1 bg-gray-200 text-sm text-gray-700 rounded disabled:opacity-50">Previous</button>
             {Array.from({ length: table.getPageCount() }, (_, i) => (
-              <button
-                key={i}
-                onClick={() => table.setPageIndex(i)}
-                className={`px-3 py-1 border rounded ${table.getState().pagination.pageIndex === i ? "bg-blue-500 text-white" : "bg-white text-gray-700"}`}
-              >
+              <button key={i} onClick={() => table.setPageIndex(i)} className={`px-3 py-1 border rounded ${table.getState().pagination.pageIndex === i ? "bg-blue-500 text-white" : "bg-white text-gray-700"}`}>
                 {i + 1}
               </button>
             ))}
-
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded disabled:opacity-50"
-            >
-              Next
-            </button>
+            <button onClick={() => table.nextPage()} disabled={!table.getCanNextPage()} className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded disabled:opacity-50">Next</button>
           </div>
         </div>
       </div>
+
+      {/* Delete Modals */}
+      {filteredData.map((row) => (
+        <dialog key={row.id} ref={(el) => { modalsRef.current[row.id] = el }} className="modal">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">Are you sure you want to delete?</h3>
+            <div className="modal-action">
+              <form method="dialog">
+                <button className="btn">No</button>
+                <button onClick={() => deleteAccount(row.id)} className="ml-3 btn btn-error">Yes</button>
+              </form>
+            </div>
+          </div>
+        </dialog>
+      ))}
+
+      {/* Edit Modal */}
+      <dialog ref={editModalRef} className="modal">
+        <div className="modal-box sm:max-w-[70%] max-w-[90%]">
+          <div className="flex items-center gap-3 h-[50px] pl-5 border-b">
+            <span className="rounded-full w-7 flex justify-center items-center h-7 bg-blue-200"><IoNewspaperSharp /></span>
+            <p className="font-bold">Edit Account</p>
+          </div>
+          <form className="my-4 border-b">
+            <div className="flex flex-col gap-2 w-full">
+              <div className="flex gap-3">
+                <label className="text-sm text-gray-500" htmlFor="code">Code:</label><span className="font-bold text-sm text-red-600">{errors.errorCode}</span>
+              </div>
+              <input
+                value={editData?.code || ""}
+                onChange={(e) => setEditData({ ...editData, code: e.target.value })}
+                className="w-full border p-2 h-8"
+                type="number"
+                id="code"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2 w-full mt-3">
+              <div className="flex gap-3">
+                <label className="text-sm text-gray-500" htmlFor="name">Name:</label><span className="font-bold text-sm text-red-600">{errors.errorName}</span>
+              </div>
+              <input
+                value={editData?.name || ""}
+                onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                className="w-full border p-2 h-8"
+                type="text"
+                id="name"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2 w-full mt-3">
+              <div className="flex gap-3">
+                <label className="text-sm text-gray-500" htmlFor="currency">Main Currency:</label><span className="font-bold text-sm text-red-600">{errors.errorCurrency}</span>
+              </div>
+              <select
+                className="w-full h-fit border p-2"
+                id="currency"
+                value={editData?.main_currency || ""}
+                onChange={(e) => setEditData({ ...editData, main_currency: e.target.value })}
+              >
+                <option value="USD">USD</option>
+                <option value="LBP">LBP</option>
+              </select>
+
+            </div>
+
+            <div className="flex flex-col gap-2 w-full mt-3">
+              <div className="flex gap-3">
+                <label className="text-sm text-gray-500" htmlFor="address">Address:</label><span className="font-bold text-sm text-red-600">{errors.errorAddress}</span>
+              </div>
+              <input
+                value={editData?.address || ""}
+                onChange={(e) => setEditData({ ...editData, address: e.target.value })}
+                className="w-full border p-2 h-8"
+                type="text"
+                id="address"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2 w-full mt-3">
+              <div className="flex gap-3">
+                <label className="text-sm text-gray-500" htmlFor="mobile">Mobile:</label><span className="font-bold text-sm text-red-600">{errors.errorMobile}</span>
+              </div>
+              <input
+                value={editData?.mobile || ""}
+                onChange={(e) => setEditData({ ...editData, mobile: e.target.value })}
+                className="w-full border p-2 h-8"
+                type="tel"
+                id="mobile"
+              />
+            </div>
+          </form>
+
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-green-500 font-bold">{success}</p>
+            <div className="flex justify-end gap-2 mt-3 mb-4">
+              <form method="dialog">
+                <button className="btn rounded-md h-8 bg-white hover:bg-blue-900 text-blue-900 hover:text-white">Close</button>
+              </form>
+              <button onClick={() => saveEdit(editData)} className="btn rounded-md h-8 bg-blue-900 hover:bg-white text-white hover:text-blue-900">Save</button>
+            </div>
+          </div>
+        </div>
+      </dialog>
     </div>
   );
 }
