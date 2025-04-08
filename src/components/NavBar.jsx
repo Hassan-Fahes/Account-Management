@@ -2,10 +2,17 @@ import { FaCakeCandles, FaUser } from "react-icons/fa6"
 import { IoIosNotifications, IoMdArrowDropdown } from "react-icons/io"
 import logo from '../assets/logo.png' ;
 import { IoMenu } from "react-icons/io5";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { AuthContext } from "../context/AuthContext";
 
 function NavBar() {
   const [open , setOpen] = useState(false) ;
+  const {setUser} = useContext(AuthContext) ;
+  const logout = async () => {
+    localStorage.clear();
+    setUser(null) ;
+  }
+
   return (
     <div>
       <div className="flex justify-center relative bg-blue-900">
@@ -21,7 +28,7 @@ function NavBar() {
             <button className="flex justify-center items-center rounded-full bg-white text-blue-900 p-1"><IoIosNotifications /></button>
             <button className="flex justify-center items-center rounded-full bg-white text-blue-900 p-1"><FaCakeCandles /></button>
             <button className="flex justify-center items-center rounded-full bg-white text-blue-900 p-1"><FaUser /></button>
-            <button className="flex items-center gap-1 text-gray-300">Da <span><IoMdArrowDropdown /></span></button>
+            <button onClick={logout} className="flex items-center gap-1 h-8 btn text-blue-900">Logout</button>
           </div>
         </nav>
         
@@ -30,7 +37,7 @@ function NavBar() {
             <button className="flex w-fit justify-center items-center rounded-full bg-white text-blue-900 p-1"><IoIosNotifications /></button>
             <button className="flex w-fit justify-center items-center rounded-full bg-white text-blue-900 p-1"><FaCakeCandles /></button>
             <button className="flex w-fit justify-center items-center rounded-full bg-white text-blue-900 p-1"><FaUser /></button>
-            <button className="flex w-fit items-center gap-1 text-gray-300">Da <span><IoMdArrowDropdown /></span></button>
+            <button className="flex btn w-fit items-center gap-1 text-blue-900 h-8">Logoute</button>
         </div>
       </div>
     </div>

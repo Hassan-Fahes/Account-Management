@@ -72,7 +72,7 @@ function deleteAccount($account){
 }
 
 function updateAccount($code , $name , $currency , $address , $mobile , $id){
-    require("../Database/connection.php") ;
+    require("connection.php") ;
 
     try{
         $sql = "UPDATE accounts SET code=:code , name=:name , main_currency=:currency , mobile=:mobile , address=:address WHERE id=:id" ;
@@ -87,5 +87,26 @@ function updateAccount($code , $name , $currency , $address , $mobile , $id){
         return true;
     }catch(PDOException $e){
         return false ;
+    }
+}
+
+function loginn($username, $password){
+    require("connection.php");
+
+    try {
+        $sql = "SELECT * FROM users WHERE username = :username";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(":username", $username);
+        $stmt->execute();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($user && password_verify($password, $user['password'])) {
+            return $user;
+        } else {
+            return false;
+        }
+
+    } catch (PDOException $e) {
+        return $e;
     }
 }

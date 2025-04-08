@@ -1,21 +1,22 @@
-import { useState } from "react";
-import { Accounts, Footer, NavBar , Table } from "./components";
-import table from './Data/TableData'
+// App.jsx
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Admin, Login } from './pages';
+import ProtectedRoute from './ProtectedRoute/PrivateRoute';
+import PublicRoute from './ProtectedRoute/PublicRoute';
 
 function App() {
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [filterType, setFilterType] = useState("all"); 
-  const [pageSize , setPageSize] = useState(10) ;
-  const [columnVisibility, setColumnVisibility] = useState({});
-  const [data , setData] = useState([]) ;
   return (
-    <>
-    <NavBar/>
-    <Accounts setData={setData} columns={table.columns} setPageSize={setPageSize} data={table.data} setFilterType={setFilterType} globalFilter={globalFilter} setGlobalFilter={setGlobalFilter} columnVisibility={columnVisibility} setColumnVisibility={setColumnVisibility}/>
-    <Table data={data} setData={setData} columns={table.columns} pageSize={pageSize} globalFilter={globalFilter} setGlobalFilter={setGlobalFilter} filterType={filterType} columnVisibility={columnVisibility} setColumnVisibility={setColumnVisibility}/>
-    <Footer/>
-    </>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route element={<PublicRoute/>}>
+          <Route path="/" element={<Login />} />
+        </Route>
+        <Route element={<ProtectedRoute />}>
+          <Route path="/admin" element={<Admin />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;

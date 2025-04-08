@@ -28,6 +28,7 @@ function Table({ data, setData, columns, pageSize, globalFilter, setGlobalFilter
   const editModalRef = useRef(null);
   const [success, setSuccess] = useState("");
   const [errors , setErrors] = useState({errorCode: "" , errorName : "" , errorAddress : "" , errorCurrency : "" , errorMobile : ""});
+  const token = localStorage.getItem("token") ;
 
   useEffect(() => {
     table.setPageSize(pageSize);
@@ -37,7 +38,13 @@ function Table({ data, setData, columns, pageSize, globalFilter, setGlobalFilter
   useEffect(() => {
     const getAccounts = async () => {
       try {
-        const response = await fetch("http://localhost/Account_Management/client_side/server_side/api/getAccounts.php");
+        const response = await fetch("http://localhost/Account_Management/client_side/server_side/api/getAccounts.php" ,
+          {
+            headers: {
+              "Authorization": `Bearer ${token}`,
+            },
+          }
+        );
         const result = await response.json();
         if (result.status === "success") {
           setData(result.accounts);
@@ -47,13 +54,14 @@ function Table({ data, setData, columns, pageSize, globalFilter, setGlobalFilter
       }
     };
     getAccounts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setData]);
 
   const deleteAccount = async (account_id) => {
     try {
       const response = await fetch("http://localhost/Account_Management/client_side/server_side/api/deleteAccount.php", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json","Authorization": `Bearer ${token}` },
         body: JSON.stringify({ account_id })
       });
       const result = await response.json();
@@ -74,7 +82,7 @@ function Table({ data, setData, columns, pageSize, globalFilter, setGlobalFilter
     try {
       const response = await fetch("http://localhost/Account_Management/client_side/server_side/api/editAccount.php", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(updatedData)
       });
       const result = await response.json();

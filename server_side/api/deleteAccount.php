@@ -1,6 +1,12 @@
 <?php 
 require_once("../cors.php") ;
-
+require_once("./checkToken.php") ;
+$headers = getallheaders() ;
+$token = checkToken($headers) ;
+if($token == "Invalid token"){
+    echo json_encode(["status" => "error_token" , "message" => $token]);
+    die() ;
+}
 $rowData = file_get_contents("php://input");
 $data = json_decode($rowData , true) ;
 

@@ -1,13 +1,19 @@
 <?php
 require_once("../cors.php");
-
+require_once("./checkToken.php") ;
+$headers = getallheaders() ;
+$token = checkToken($headers) ;
+if($token == "Invalid token"){
+    echo json_encode(["status" => "error_token" , "message" => $token]);
+    die() ;
+}
 // get json data
 $rawData = file_get_contents("php://input");
 
 // transform json to array
 $data = json_decode($rawData , true) ;
 
-$code = htmlspecialchars(trim($data["code"] ?? "")) ;
+$code = htmlspecialchars(trim(string: $data["code"] ?? "")) ;
 $name = htmlspecialchars(trim($data["name"] ?? "")) ;
 $address = htmlspecialchars(trim($data["address"] ?? "")) ;
 $currency = strtoupper(htmlspecialchars(trim($data["currency"] ?? ""))) ;

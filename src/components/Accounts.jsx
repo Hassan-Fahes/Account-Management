@@ -19,7 +19,9 @@ function Accounts({ globalFilter, setData , setGlobalFilter , setFilterType , se
   const addAccount = async () => {
     // Header
     const myHeaders = new Headers() ;
+    const token = localStorage.getItem("token") ;
     myHeaders.append("Content-Type" , "application/json") ;
+    myHeaders.append("Authorization" ,`Bearer ${token}` )
     // Body
     const data = {
       code: inputValue.code,
