@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useContext } from "react";
 import { IoMdArrowDropdown, IoMdArrowDropup } from "react-icons/io";
 import {
   useReactTable,
@@ -12,6 +12,8 @@ import { rankItem } from "@tanstack/match-sorter-utils";
 import { FaEye } from "react-icons/fa";
 import { MdDelete, MdEdit } from "react-icons/md";
 import { IoNewspaperSharp } from "react-icons/io5";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
 const fuzzyFilter = (row, columnId, value, addMeta) => {
   const itemRank = rankItem(row.getValue(columnId), value);
@@ -29,6 +31,8 @@ function Table({ data, setData, columns, pageSize, globalFilter, setGlobalFilter
   const [success, setSuccess] = useState("");
   const [errors , setErrors] = useState({errorCode: "" , errorName : "" , errorAddress : "" , errorCurrency : "" , errorMobile : ""});
   const token = localStorage.getItem("token") ;
+  const {setUser} = useContext(AuthContext) ;
+  const navigate = useNavigate() ;
 
   useEffect(() => {
     table.setPageSize(pageSize);
@@ -48,6 +52,9 @@ function Table({ data, setData, columns, pageSize, globalFilter, setGlobalFilter
         const result = await response.json();
         if (result.status === "success") {
           setData(result.accounts);
+        }else if(result.status === "error_token"){
+          setUser(null) ;
+          navigate("/") ;
         }
       } catch (error) {
         console.error("Error:", error);
@@ -67,6 +74,10 @@ function Table({ data, setData, columns, pageSize, globalFilter, setGlobalFilter
       const result = await response.json();
       if (result.status === "success") {
         setData(prevData => prevData.filter(account => account.id !== account_id));
+      }else if(result.status == "error_token"){
+        setUser(null) ;
+        navigate("/") ;
+        
       }
     } catch (error) {
       console.error("Error:", error);
@@ -104,6 +115,9 @@ function Table({ data, setData, columns, pageSize, globalFilter, setGlobalFilter
           errorCurrency: "",
           errorMobile: ""
         });
+      }else if(result.success == "error_token"){
+        setUser(null) ;
+        navigate("/") ;
       }else{
         setErrors({
           errorCode: result.errors.code || "",

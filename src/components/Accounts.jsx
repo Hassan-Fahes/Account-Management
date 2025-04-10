@@ -1,12 +1,14 @@
 /* eslint-disable react/prop-types */
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { FaFilter } from "react-icons/fa6"
 import { IoMdArrowDropdown } from "react-icons/io"
 import { PiPrinter } from "react-icons/pi"
 import { jsPDF } from "jspdf"; 
 import * as XLSX from 'xlsx';
 import { IoNewspaperSharp } from "react-icons/io5";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 
 function Accounts({ globalFilter, setData , setGlobalFilter , setFilterType , setPageSize , data , columns ,columnVisibility, setColumnVisibility}) {
   const [showFilter, setShowFilter] = useState(true);
@@ -14,7 +16,8 @@ function Accounts({ globalFilter, setData , setGlobalFilter , setFilterType , se
   const[success , setSuccess] = useState("") ;
   const [inputValue , setInputValue] = useState({code : "" , name : "" , currency : "USD" , address : "" , mobile : ""});
   const [errors , setErrors] = useState({errorCode : "" , errorName : "" , errorCurrency : "" , errorAddress : "" , errorMobile : ""});
-
+  const navigate = useNavigate() ;
+  const {setUser} = useContext(AuthContext) ;
   // function To add a account
   const addAccount = async () => {
     // Header
@@ -51,7 +54,11 @@ function Accounts({ globalFilter, setData , setGlobalFilter , setFilterType , se
           errorCurrency: result.errors.currency || "",
           errorMobile: result.errors.mobile || ""
         });
-      }else{
+      }else if(result.status == "error_token"){
+        setUser(null) ;
+        navigate("/");
+      }
+      else{
         setErrors({
           errorCode: "",
           errorName: "",
